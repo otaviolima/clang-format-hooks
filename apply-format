@@ -8,6 +8,7 @@
 set -u
 # Make any failure in piped commands be reflected in the exit code.
 set -o pipefail
+set -x
 
 readonly bash_source="${BASH_SOURCE[0]:-$0}"
 
@@ -329,8 +330,15 @@ else # Diff-only.
             -p1 \
             -style="$style" \
             -iregex="$exclusions_regex"'.*\.(c|cpp|cxx|cc|h|hpp|m|mm|js|java)' \
-            > "$patch_dest" \
-        || exit 1
+            > "$patch_dest"
+
+    exit_code=$?
+
+    # clang-format.py returns 1 whenever changes were found
+    # So we only abort if exit code is different from 0 or 1
+    if [ $exit_code -ne 0 ] && [ $exit_code -ne 1 ]; then
+        exit $exit_code
+    fi
 
     if [ "$apply_to_staged" = true ]; then
         if [ ! -s "$patch_dest" ]; then
